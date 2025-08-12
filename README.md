@@ -32,7 +32,7 @@
 
 먼저 **개발자 도구 \> 액션** 메뉴에서 `pyscript.zb_init` 서비스를 호출하여 도어락을 수동으로 등록하고, 정상 동작하는지 확인합니다.
 
-![개발자 도구](img.devtools.png)
+![개발자 도구](img/devtools.png)
 
   - **액션**: `pyscript.zb_init`
   - **필수 매개변수**:
@@ -53,7 +53,7 @@
 
 정상적으로 동작하는 것을 확인했으면, Home Assistant가 시작될 때마다 이 서비스를 자동으로 호출하도록 **자동화**를 만듭니다.
 
-![자동화 예시](img.automation.png)
+![자동화 예시](img/automation.png)
 
 -----
 
@@ -61,4 +61,4 @@
 
 등록 된 엔티티들을 필요에 따라 사용 합니다.
 
-![사용 방법](img.device.png)
+![사용 방법](img/device.png)
