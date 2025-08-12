@@ -89,7 +89,7 @@ fields:
           "identifiers": [ZB_DEVICE[index]["id"]],
           "name": ZB_DEVICE[index]["name"],
           "model": ZB_DEVICE[index]["model"],
-          "manufacturer": "Zigbang Doorlock by 3735943886",
+          "manufacturer": "Zigbang Doorlock (3735943886)",
           "sw_version": "0.1",
         },
       }
