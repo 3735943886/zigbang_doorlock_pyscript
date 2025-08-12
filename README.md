@@ -28,9 +28,9 @@
 
 `zigbang_doorlock.py`를 Home Assistant `<config>/pyscript` 폴더에 저장합니다.
 
-#### 3\. Home Assistant에서 서비스 호출
+#### 3\. Home Assistant에서 액션 호출
 
-먼저 **개발자 도구 \> 액션** 메뉴에서 `pyscript.zb_init` 서비스를 호출하여 도어락을 수동으로 등록하고, 정상 동작하는지 확인합니다.
+먼저 **개발자 도구 \> 액션** 메뉴에서 `pyscript.zb_init`를 호출하여 도어락을 수동으로 등록하고, 정상 동작하는지 확인합니다.
 
 ![개발자 도구](img/devtools.png)
 
@@ -45,13 +45,13 @@
       - `prefix`: MQTT Discovery에 사용될 접두사. 기본값은 `homeassistant`입니다. 생략가능.
       - `imei`: 직방 로그온을 위한 IMEI 정보. 자동으로 생성하므로 특별한 이유가 없다면 비워두셔도 됩니다.
 
-서비스 호출이 성공적으로 완료되면, Home Assistant에 새로운 `lock` 엔티티와 `sensor` 엔티티가 포함된 도어락 디바이스가 자동으로 생성됩니다.
+액션 호출이 성공적으로 완료되면, Home Assistant에 새로운 `lock` 엔티티와 `sensor` 엔티티가 포함된 도어락 디바이스가 자동으로 생성됩니다.
 
 -----
 
 ### 자동화 예시
 
-정상적으로 동작하는 것을 확인했으면, Home Assistant가 시작될 때마다 이 서비스를 자동으로 호출하도록 **자동화**를 만듭니다.
+정상적으로 동작하는 것을 확인했으면, Home Assistant가 시작될 때마다 이 액션을 자동으로 호출하도록 **자동화**를 만듭니다.
 
 ![자동화 예시](img/automation.png)
 
