@@ -35,6 +35,8 @@ ZB_TASK = []
 ZB_SESSION = None
 ZB_AUTH_RUNNING = False
 ZB_AUTH_COND = asyncio.Condition()
+ZB_CURRENT_STATE = None
+ZB_SENSOR_FLAG = None
 
 @service(supports_response = 'only')
 def zb_init(id, password, sensors = None, prefix = "homeassistant", imei = None):
@@ -63,7 +65,7 @@ fields:
     example: 000000000000000
     required: false
 """
-  global LOGIN_DATA, ZB_TASK
+  global LOGIN_DATA, ZB_TASK, ZB_CURRENT_STATE, ZB_SENSOR_FLAG
   task.unique("ZB_DOORLOCK_INIT", kill_me = True)
   LOGIN_DATA = {
     "loginId": id,
@@ -76,8 +78,8 @@ fields:
     zb_shutdown()
     zb_get_appver()
     zb_auth()
-    stats = zb_get_status(True)
-    for index, _ in enumerate(stats):
+    ZB_CURRENT_STATE = zb_get_status(True)
+    for index, _ in enumerate(ZB_CURRENT_STATE):
       ZB_LAST_STAT[index] = {}
 
     # ADD DEVICE
@@ -90,7 +92,7 @@ fields:
           "name": ZB_DEVICE[index]["name"],
           "model": ZB_DEVICE[index]["model"],
           "manufacturer": "Zigbang Doorlock (3735943886)",
-          "sw_version": "0.1",
+          "sw_version": "0.2",
         },
       }
       payload["name"] = ZB_DEVICE[index]["name"]
@@ -122,20 +124,45 @@ fields:
       del payload["unit_of_measurement"]
       mqtt.publish(topic = "{}/sensor/{}/config".format(prefix, payload["unique_id"]), payload = json.dumps(payload))
 
-    task.sleep(5)
-    for index, _ in enumerate(stats):
-      zb_data_refine(ZB_DEVICE[index]["id"], stats[index], ZB_LAST_STAT[index])
-    if sensors is None:
-      ZB_TASK.append(add_loop_time("cron(*/1 * * * *)", 1, "ZB_DOORLOCK_LOOP", 0, True))
-    else:
+    task.sleep(2)
+    for index, _ in enumerate(ZB_CURRENT_STATE):
+      zb_data_refine(ZB_DEVICE[index]["id"], ZB_CURRENT_STATE[index], ZB_LAST_STAT[index])
+    if sensors:
+      ZB_SENSOR_FLAG = True
       if not isinstance(sensors, list):
         sensors = [sensors]
       for sensor in sensors:
         ZB_TASK.append(add_loop_state(sensor, 10, "ZB_DOORLOCK_LOOP", 2, False))
-      ZB_TASK.append(add_loop_time("cron(0 * * * *)", 1, "ZB_DOORLOCK_LOOP", 0, True))
+    else:
+      ZB_SENSOR_FLAG = False
     return { "doorlock": ZB_DEVICE }
+  except aiohttp.ClientResponseError as e:
+    if e.status == 401:
+      error_message = "인증 실패: 아이디, 비밀번호, 또는 imei를 확인해주세요."
+    else:
+      error_message = f"서버 응답 오류 (HTTP {e.status}): {e.message}"
+    return { "error": error_message }
+  except (aiohttp.ClientConnectorError, asyncio.TimeoutError):
+    return { "error": "네트워크 오류: 직방 서버에 연결할 수 없습니다. 인터넷 연결을 확인하거나 잠시 후 다시 시도해주세요." }
+  except (KeyError, TypeError) as e:
+    return { "error": f"데이터 처리 오류: 직방 API 응답 형식이 변경되었을 수 있습니다. 오류: {e}" }
   except Exception as e:
-    return { "error": "{}: {}".format(type(e).__name__, str(e)) }
+    return { "error": f"알 수 없는 오류 발생: {type(e).__name__}: {str(e)}" }
+
+
+@time_trigger("cron(*/1 * * * *)")
+def zb_lock_check(**kwargs):
+  global ZB_CURRENT_STATE, ZB_SENSOR_FLAG
+  task.unique("ZB_PERIOD_LOCK_CHECK")
+  skip_poll = ZB_SENSOR_FLAG
+  if ZB_CURRENT_STATE:
+    if skip_poll:
+      for index, _ in enumerate(ZB_CURRENT_STATE):
+        if not ZB_CURRENT_STATE[index].get("locked", True):
+          skip_poll = False
+          break
+    if not skip_poll:
+      zb_loop_internal(1, "ZB_DOORLOCK_LOOP", 0, True)
 
 
 @mqtt_trigger("zigbang/command/#")
@@ -165,26 +192,19 @@ def zb_data_refine(id, data, olddata):
         mqtt.publish(topic = "zigbang/{}/{}".format(id, key), payload = payload)
 
 def zb_loop_internal(timeout, unique, interval, kill_me):
-  global ZB_LAST_STAT
+  global ZB_LAST_STAT, ZB_CURRENT_STATE
   task.unique(unique, kill_me)
-  stats = {}
   for _ in range(0, timeout):
     try:
-      stats = zb_get_status()
-      for index, _ in enumerate(stats):
-        zb_data_refine(ZB_DEVICE[index]["id"], stats[index], ZB_LAST_STAT[index])
+      ZB_CURRENT_STATE = zb_get_status()
+      for index, _ in enumerate(ZB_CURRENT_STATE):
+        zb_data_refine(ZB_DEVICE[index]["id"], ZB_CURRENT_STATE[index], ZB_LAST_STAT[index])
     except Exception as e:
       log.warning("{}: {}".format(type(e).__name__, str(e)))
     task.sleep(interval)
 
 def add_loop_state(trigger, timeout, unique, interval, kill_me):
   @state_trigger(trigger)
-  def zb_loop(**kwargs):
-    zb_loop_internal(timeout, unique, interval, kill_me)
-  return zb_loop
-
-def add_loop_time(trigger, timeout, unique, interval, kill_me):
-  @time_trigger(trigger)
   def zb_loop(**kwargs):
     zb_loop_internal(timeout, unique, interval, kill_me)
   return zb_loop
@@ -320,6 +340,7 @@ def zb_session(base_url):
 def zb_shutdown():
   global ZB_SESSION, ZB_TASK
   task.unique("ZB_DOORLOCK_LOOP")
+  task.unique("ZB_PERIOD_LOCK_CHECK")
   ZB_TASK = []
   if ZB_SESSION and not ZB_SESSION.closed:
     try:
