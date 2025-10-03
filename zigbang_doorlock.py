@@ -92,12 +92,12 @@ fields:
           "name": ZB_DEVICE[index]["name"],
           "model": ZB_DEVICE[index]["model"],
           "manufacturer": "Zigbang Doorlock (3735943886)",
-          "sw_version": "0.2",
+          "sw_version": "0.2.1",
         },
       }
       payload["name"] = ZB_DEVICE[index]["name"]
       payload["unique_id"] = ZB_DEVICE[index]["id"] + "_lock"
-      payload["object_id"] = ZB_DEVICE[index]["model"]
+      payload["default_entity_id"] = ZB_DEVICE[index]["model"]
       payload["state_topic"] = "zigbang/{}/locked".format(ZB_DEVICE[index]["id"])
       payload["command_topic"] = "zigbang/command/{}".format(ZB_DEVICE[index]["id"])
       payload["state_locked"] = True
@@ -106,7 +106,7 @@ fields:
 
       payload["name"] = ZB_DEVICE[index]["name"] + "배터리"
       payload["unique_id"] = ZB_DEVICE[index]["id"] + "_battery"
-      payload["object_id"] = ZB_DEVICE[index]["model"] + "_battery"
+      payload["default_entity_id"] = ZB_DEVICE[index]["model"] + "_battery"
       payload["state_topic"] = "zigbang/{}/battery".format(ZB_DEVICE[index]["id"])
       del payload["command_topic"]
       del payload["state_locked"]
@@ -117,7 +117,7 @@ fields:
 
       payload["name"] = ZB_DEVICE[index]["name"] + "메시지"
       payload["unique_id"] = ZB_DEVICE[index]["id"] + "_message"
-      payload["object_id"] = ZB_DEVICE[index]["model"] + "_message"
+      payload["default_entity_id"] = ZB_DEVICE[index]["model"] + "_message"
       payload["icon"] = "mdi:message-alert"
       payload["state_topic"] = "zigbang/{}/msgText".format(ZB_DEVICE[index]["id"])
       del payload["device_class"]
